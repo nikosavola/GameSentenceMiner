@@ -1,5 +1,6 @@
 import os
 import tempfile
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -530,8 +531,8 @@ class ReplayAudioExtractor:
                 try:
                     logger.info("No voice activity detected, using TTS as fallback.")
                     text_to_tts = full_text if full_text else game_line.text
-                    url = get_config().vad.tts_url.replace("$s", text_to_tts)
-                    tts_resp = requests.get(url)
+                    url = get_config().vad.tts_url.replace("$s", urllib.parse.quote(text_to_tts))
+                    tts_resp = requests.get(url, timeout=30)
                     if not tts_resp.ok:
                         logger.error(
                             f"Error fetching TTS audio from {url}. Is it running?: {tts_resp.status_code} {tts_resp.text}"

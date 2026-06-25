@@ -522,7 +522,7 @@ def get_latest_version():
     try:
         import requests
 
-        response = requests.get(f"https://pypi.org/pypi/{PACKAGE_NAME}/json")
+        response = requests.get(f"https://pypi.org/pypi/{PACKAGE_NAME}/json", timeout=10)
         latest_version = response.json()["info"]["version"]
         return latest_version
     except Exception as e:

@@ -36,8 +36,8 @@ def open_browser_window(note_id, query=None):
                     "query": "nid:1",
                 },
             }
-            requests.post(url, json=blank_req_data, headers=headers)
-        response = requests.post(url, json=data, headers=headers)
+            requests.post(url, json=blank_req_data, headers=headers, timeout=5)
+        response = requests.post(url, json=data, headers=headers, timeout=5)
         if response.status_code == 200:
             if query:
                 logger.info(f"Opened Anki browser with query: {query}")
@@ -56,7 +56,7 @@ def open_anki_card(note_id):
     data = {"action": "guiEditNote", "version": 6, "params": {"note": note_id}}
 
     try:
-        response = requests.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=headers, timeout=5)
         if response.status_code == 200:
             logger.info(f"Opened Anki note with ID {note_id}")
         else:

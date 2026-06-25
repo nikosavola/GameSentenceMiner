@@ -208,10 +208,7 @@ def do_text_replacements(text, replacements_json):
 def open_audio_in_external(fileabspath, shell=False):
     logger.info("Opening audio in external program...")
     try:
-        if shell:
-            subprocess.Popen(f' "{get_config().audio.external_tool}" "{fileabspath}" ', shell=True)
-        else:
-            subprocess.Popen([get_config().audio.external_tool, fileabspath])
+        subprocess.Popen([get_config().audio.external_tool, fileabspath])
     except Exception as e:
         logger.error(f"Failed to open audio in external program: {e}")
         return False

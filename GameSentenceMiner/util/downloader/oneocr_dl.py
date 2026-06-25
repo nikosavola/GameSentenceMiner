@@ -183,7 +183,7 @@ class Downloader:
             "Get-AppxPackage Microsoft.ScreenSketch | Select-Object -ExpandProperty InstallLocation",
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, shell=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             snipping_path = result.stdout.strip()
         except Exception:
             snipping_path = None
@@ -248,6 +248,7 @@ class Downloader:
             headers=headers,
             data=data,
             proxies=getproxy(),
+            timeout=10,
         )
         response.raise_for_status()  # Raise an exception for bad status codes
 
@@ -271,7 +272,7 @@ class Downloader:
         package_name = saves[-1][2]
 
         logger.info(f"Downloading {package_name} from {url}")
-        req = requests.get(url, stream=True, proxies=getproxy())
+        req = requests.get(url, stream=True, proxies=getproxy(), timeout=(10, 60))
         req.raise_for_status()
 
         total_size_in_bytes = int(req.headers.get("content-length", 0))
@@ -347,7 +348,7 @@ class Downloader:
         """Downloads a zip file from a URL and extracts it."""
         logger.info("Downloading OneOCR from fallback URL")
 
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=(10, 60))
         response.raise_for_status()
 
         temp_zip_path = os.path.join(tempfile.gettempdir(), os.path.basename(url))
