@@ -7,6 +7,7 @@ import * as path from 'path';
 import axios from 'axios';
 import extract from 'extract-zip';
 import semver from 'semver';
+import type { SaveSettingsPayload } from '../../shared/ipc_types.js';
 import {
     getAutoUpdateGSMApp,
     getAutoUpdateElectron,
@@ -966,8 +967,11 @@ export function registerSettingsIPC(deps?: SettingsIPCDependencies) {
         return await deps.updateNow();
     });
 
-    ipcMain.handle('settings.saveSettings', async (_, settings: any) => {
-        const payload = settings && typeof settings === 'object' ? settings : {};
+    ipcMain.handle('settings.saveSettings', async (_, settings: unknown) => {
+        // Renderer-supplied payload is untrusted; narrow to the shared shape and
+        // keep the per-field runtime guards below.
+        const payload: SaveSettingsPayload =
+            settings && typeof settings === 'object' ? (settings as SaveSettingsPayload) : {};
 
         if (typeof payload.autoUpdateGSMApp === 'boolean') {
             setAutoUpdateGSMApp(payload.autoUpdateGSMApp);

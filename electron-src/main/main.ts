@@ -165,19 +165,34 @@ function bootstrapPreReleaseSettingsFromMetadata(): void {
     setPreReleaseMetadataAutoEnableApplied(true);
 }
 
-// Global error handling setup - catches all unhandled errors to prevent crashes
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+// Global error handling setup - catches all unhandled errors to prevent crashes.
+// Throttle error dialogs: a repeating rejection must not spam blocking modals.
+const ERROR_DIALOG_THROTTLE_MS = 60_000;
+let lastErrorDialogAt = 0;
+
+function maybeShowErrorDialog(title: string, message: string): void {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        return;
+    }
+    const now = Date.now();
+    if (now - lastErrorDialogAt < ERROR_DIALOG_THROTTLE_MS) {
+        // Already showed one recently; this error is logged only.
+        return;
+    }
+    lastErrorDialogAt = now;
+    dialog.showErrorBox(title, message);
+}
+
+process.on('unhandledRejection', (reason: unknown, _promise: Promise<unknown>) => {
     const errorMessage = `Unhandled Promise Rejection: ${reason}`;
     log.error('Unhandled Promise Rejection:', errorMessage);
     console.error('Unhandled Promise Rejection:', reason);
 
-    // Show error dialog to user but don't crash
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        dialog.showErrorBox(
-            'Application Error',
-            'An unexpected error occurred. The application will continue running. Check the logs for details.'
-        );
-    }
+    // Show error dialog to user but don't crash (throttled).
+    maybeShowErrorDialog(
+        'Application Error',
+        'An unexpected error occurred. The application will continue running. Check the logs for details.'
+    );
 });
 
 process.on('uncaughtException', (error: Error) => {
@@ -186,13 +201,11 @@ process.on('uncaughtException', (error: Error) => {
     log.error('Stack:', error.stack);
     console.error('Uncaught Exception:', error);
 
-    // Show error dialog but don't crash
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        dialog.showErrorBox(
-            'Critical Error',
-            `A critical error occurred: ${error.message}\n\nThe application will continue running. Please check the logs and consider restarting.`
-        );
-    }
+    // Show error dialog but don't crash (throttled).
+    maybeShowErrorDialog(
+        'Critical Error',
+        `A critical error occurred: ${error.message}\n\nThe application will continue running. Please check the logs and consider restarting.`
+    );
 });
 
 // Handle Electron-specific errors
