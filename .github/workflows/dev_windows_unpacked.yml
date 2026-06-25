@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.12.0
+          node-version-file: .nvmrc
 
       - name: Compute next pre-release version
         id: version
@@ -40,7 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
           fetch-depth: 1
 
       - uses: actions/setup-python@v5
@@ -49,7 +48,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.12.0
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: |
             package-lock.json
