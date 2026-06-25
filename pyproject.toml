@@ -30,11 +30,13 @@ dependencies = [
   "python-xlib ; sys_platform == 'linux'",
   "rapidfuzz~=3.10.0",
   "plyer~=2.1.0",
+  # keyboard: unmaintained (last release 2020); migration-to-pynput candidate. Do not bump blindly.
   "keyboard~=0.13.5",
   "websockets~=15.0.1",
   "dataclasses_json~=0.6.7",
   "obsws-python~=1.8.0",
   "pytz>=2025.1",
+  # numpy: hard-pinned, intentional — ABI-coupled to faster-whisper/CTranslate2/onnxruntime. Verify ABI before relaxing.
   "numpy==2.2.6",
   "faster-whisper~=1.2.1",
   "regex~=2025.10.23",
@@ -61,6 +63,7 @@ dependencies = [
   "langid~=1.1.6",
   "pysbd~=0.3.4",
   "pypresence>=4.6.1",
+  # tokenizers: hard-pinned, intentional — must match faster-whisper's expected version. Verify before relaxing.
   "tokenizers==0.22.1",
   "curl-cffi~=0.13.0",
   "protobuf>=6.33.2",
