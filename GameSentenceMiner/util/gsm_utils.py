@@ -166,11 +166,13 @@ def wait_for_stable_file(file_path, timeout=10, check_interval=0.1):
 def isascii(s: str):
     try:
         return s.isascii()
-    except:
+    except Exception as e:
+        logger.debug(f"isascii() failed, falling back to encode check: {e}")
         try:
             s.encode("ascii")
             return True
-        except:
+        except Exception as e:
+            logger.debug(f"ascii encode check failed: {e}")
             return False
 
 
