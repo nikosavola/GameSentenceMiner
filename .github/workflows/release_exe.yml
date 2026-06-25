@@ -130,7 +130,7 @@ jobs:
       contents: write
     steps:
       - name: Create release shell
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.prepare-release.outputs.PACKAGE_VERSION }}
           target_commitish: ${{ github.sha }}
@@ -412,7 +412,7 @@ jobs:
           Set-Content -Path (Join-Path $distRoot "latest.yml") -Value $latestYml -Encoding utf8NoBOM
 
       - name: Upload Windows release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.prepare-release.outputs.PACKAGE_VERSION }}
           target_commitish: ${{ github.sha }}
@@ -492,7 +492,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Linux release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.prepare-release.outputs.PACKAGE_VERSION }}
           target_commitish: ${{ github.sha }}
@@ -573,7 +573,7 @@ jobs:
         run: cp dist/latest-mac.yml dist/latest-mac-arm64.yml
 
       - name: Upload macOS arm64 release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.prepare-release.outputs.PACKAGE_VERSION }}
           target_commitish: ${{ github.sha }}

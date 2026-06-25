@@ -260,7 +260,7 @@ jobs:
           }
 
       - name: Upload to pre-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.compute-version.outputs.PACKAGE_VERSION }}
           name: Pre-Release v${{ needs.compute-version.outputs.PACKAGE_VERSION }}
@@ -339,7 +339,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload to pre-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.compute-version.outputs.PACKAGE_VERSION }}
           name: Pre-Release v${{ needs.compute-version.outputs.PACKAGE_VERSION }}
@@ -419,7 +419,7 @@ jobs:
         run: cp dist/latest-mac.yml dist/latest-mac-arm64.yml
 
       - name: Upload to pre-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ needs.compute-version.outputs.PACKAGE_VERSION }}
           name: Pre-Release v${{ needs.compute-version.outputs.PACKAGE_VERSION }}

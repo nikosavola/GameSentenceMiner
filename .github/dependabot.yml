@@ -35,3 +35,19 @@ updates:
         applies-to: "version-updates"
         patterns:
           - "*"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "07:00"
+      timezone: "America/New_York"
+    cooldown:
+      default-days: 30
+      include:
+        - "*"
+    groups:
+      github-actions-batch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
