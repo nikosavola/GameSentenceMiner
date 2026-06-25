@@ -1822,6 +1822,16 @@ def check_and_run_migrations():
             commit=True,
         )
 
+        # Index hot filter columns unconditionally (tokenization path also creates these; IF NOT EXISTS lets them coexist).
+        GameLinesTable._db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_game_lines_timestamp ON game_lines(timestamp)",
+            commit=True,
+        )
+        GameLinesTable._db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_game_lines_game_id ON game_lines(game_id)",
+            commit=True,
+        )
+
         GameLinesTable._db.execute(
             f"""
             CREATE TRIGGER IF NOT EXISTS trg_game_lines_sync_insert
