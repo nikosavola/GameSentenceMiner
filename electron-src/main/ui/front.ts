@@ -108,6 +108,19 @@ export function registerFrontPageIPC() {
     });
 
     ipcMain.handle('open-external-link', async (_, url: string) => {
+        // Only allow http(s); a renderer-supplied URL could otherwise use a dangerous
+        // scheme (file:, javascript:, custom protocol handlers) -> potential RCE.
+        let parsed: URL;
+        try {
+            parsed = new URL(url);
+        } catch {
+            console.error('open-external-link rejected (unparseable URL):', url);
+            return;
+        }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            console.error('open-external-link rejected (disallowed protocol):', url);
+            return;
+        }
         const { shell } = await import('electron');
         await shell.openExternal(url);
     });

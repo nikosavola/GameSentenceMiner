@@ -1381,10 +1381,21 @@ async function createWindow() {
     });
 
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (url.startsWith('http://') || url.startsWith('https://')) {
+        // Only hand http(s) URLs to the OS; never open a new window (deny) and never
+        // pass through other schemes (file:, javascript:, custom protocols) -> RCE risk.
+        let protocol = '';
+        try {
+            protocol = new URL(url).protocol;
+        } catch {
+            console.error('Blocked window.open with unparseable URL:', url);
+            return { action: 'deny' };
+        }
+        if (protocol === 'http:' || protocol === 'https:') {
             shell.openExternal(url).catch((error) => {
                 console.error('Failed to open external link:', error);
             });
+        } else {
+            console.error('Blocked window.open with disallowed protocol:', url);
         }
         return { action: 'deny' };
     });

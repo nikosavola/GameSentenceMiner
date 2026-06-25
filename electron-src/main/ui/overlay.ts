@@ -1,4 +1,4 @@
-import { BrowserWindow, session, screen, globalShortcut, dialog, ipcMain, app } from 'electron';
+import { BrowserWindow, session, screen, globalShortcut, dialog, ipcMain, app, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -475,21 +475,22 @@ function openSettings() {
         });
 
         settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
-            const child = new BrowserWindow({
-                parent: settingsWindow ? settingsWindow : undefined,
-                show: true,
-                width: 1200,
-                height: 980,
-                webPreferences: {
-                    nodeIntegration: true,
-                    contextIsolation: false,
-                    devTools: true,
-                    nodeIntegrationInSubFrames: true,
-                    backgroundThrottling: false,
-                },
-            });
-            child.setMenu(null);
-            child.loadURL(url);
+            // Never open window.open() targets into a new Node-integrated BrowserWindow
+            // (nodeIntegration:true + contextIsolation:false would make any attacker-
+            // controlled page an RCE). All real callers are external http(s) docs links,
+            // so hand those to the OS browser and deny everything else.
+            let protocol = '';
+            try {
+                protocol = new URL(url).protocol;
+            } catch {
+                console.error('Overlay settings blocked window.open (unparseable URL):', url);
+                return { action: 'deny' };
+            }
+            if (protocol === 'http:' || protocol === 'https:') {
+                void shell.openExternal(url);
+            } else {
+                console.error('Overlay settings blocked window.open (disallowed protocol):', url);
+            }
             return { action: 'deny' };
         });
 
@@ -814,6 +815,12 @@ export async function launchOverlay() {
         title: 'GSM Overlay',
         fullscreen: false,
         webPreferences: {
+            // SECURITY: nodeIntegration + contextIsolation:false + webSecurity:false are
+            // required here: the transparent overlay loads the bundled Yomitan dictionary
+            // UI which performs cross-origin/file:// resource access and the preload uses
+            // Node APIs. Because these protections are off, the navigation guards added
+            // after loadFile() below are what keep the window pinned to its local content
+            // and route any external link through the OS browser instead.
             contextIsolation: false,
             nodeIntegration: true,
             preload: preloadPath,
@@ -874,6 +881,38 @@ export async function launchOverlay() {
     });
 
     overlayWindow.loadFile(indexPath);
+
+    // The overlay runs with webSecurity:false + nodeIntegration:true, so constrain it to
+    // its bundled local content: deny all window.open (routing http(s) to the OS browser)
+    // and block top-level navigation away from file:// to prevent a hostile page from
+    // gaining a Node-integrated context.
+    overlayWindow.webContents.setWindowOpenHandler(({ url }) => {
+        let protocol = '';
+        try {
+            protocol = new URL(url).protocol;
+        } catch {
+            return { action: 'deny' };
+        }
+        if (protocol === 'http:' || protocol === 'https:') {
+            void shell.openExternal(url);
+        }
+        return { action: 'deny' };
+    });
+    overlayWindow.webContents.on('will-navigate', (event, navUrl) => {
+        let protocol = '';
+        try {
+            protocol = new URL(navUrl).protocol;
+        } catch {
+            event.preventDefault();
+            return;
+        }
+        if (protocol !== 'file:') {
+            event.preventDefault();
+            if (protocol === 'http:' || protocol === 'https:') {
+                void shell.openExternal(navUrl);
+            }
+        }
+    });
 
     if (isDev) {
         overlayWindow.webContents.on('context-menu', () => {
