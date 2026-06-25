@@ -631,21 +631,18 @@ def extract_game_metric_value(game_id, metric_type, start_date=None, end_date=No
     if base == "finish_game":
         base = "characters"
 
-    lines = GameLinesTable.get_all_by_game_id(game_id, for_stats=True)
+    # Map inclusive local-date bounds to half-open timestamp bounds and filter in
+    # SQL instead of loading the full game history. [start_local_midnight,
+    # (end + 1 day) local_midnight) matches the previous
+    # datetime.date.fromtimestamp() bucketing exactly.
+    start_ts = datetime.datetime.combine(start_date, datetime.time.min).timestamp() if start_date else None
+    end_ts = (
+        datetime.datetime.combine(end_date + datetime.timedelta(days=1), datetime.time.min).timestamp()
+        if end_date
+        else None
+    )
 
-    if start_date or end_date:
-        filtered = []
-        for ln in lines:
-            try:
-                line_date = datetime.date.fromtimestamp(float(ln.timestamp))
-            except (TypeError, ValueError):
-                continue
-            if start_date and line_date < start_date:
-                continue
-            if end_date and line_date > end_date:
-                continue
-            filtered.append(ln)
-        lines = filtered
+    lines = GameLinesTable.get_all_by_game_id_filtered_by_timestamp(game_id, start=start_ts, end=end_ts, for_stats=True)
 
     if base == "characters":
         return sum(len(ln.line_text) if ln.line_text else 0 for ln in lines)

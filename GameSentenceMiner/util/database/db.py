@@ -881,6 +881,32 @@ class GameLinesTable(SQLiteDBTable):
         return [cls.from_row(row, clean_columns=clean_columns) for row in rows]
 
     @classmethod
+    def get_all_by_game_id_filtered_by_timestamp(
+        cls,
+        game_id: str,
+        start: Optional[float] = None,
+        end: Optional[float] = None,
+        for_stats: bool = False,
+    ) -> List["GameLinesTable"]:
+        """Get lines for a game_id, optionally bounded by [start, end) timestamps.
+
+        ``start`` is inclusive, ``end`` is exclusive, so callers can map a local
+        date range to half-open timestamp bounds without double-counting.
+        """
+        query = f"SELECT * FROM {cls._table} WHERE game_id=?"
+        params: list[Any] = [game_id]
+        if start is not None:
+            query += " AND CAST(timestamp AS REAL) >= ?"
+            params.append(start)
+        if end is not None:
+            query += " AND CAST(timestamp AS REAL) < ?"
+            params.append(end)
+        query += " ORDER BY timestamp ASC"
+        rows = cls._db.fetchall(query, tuple(params))
+        clean_columns = ["line_text"] if for_stats else []
+        return [cls.from_row(row, clean_columns=clean_columns) for row in rows]
+
+    @classmethod
     def get_all_games_with_lines(cls) -> List[str]:
         rows = cls._db.fetchall(f"SELECT DISTINCT game_name FROM {cls._table}")
         return [row[0] for row in rows if row[0] is not None]

@@ -540,30 +540,32 @@ def register_database_api_routes(app):
                     # Fall through to LIKE search below
 
             if use_regex:
-                # Regex search: fetch all candidate rows, filter in Python
+                # Regex search: narrow the candidate set in SQL (game + date range)
+                # first, then apply the regex itself in Python.
                 try:
                     # Ensure query is a string
                     if not isinstance(query, str):
                         return jsonify({"error": "Invalid query parameter type"}), 400
 
-                    all_lines = GameLinesTable.all()
+                    # Push game_filter and date-range into SQL (mirrors the LIKE branch
+                    # below) so we never load the full table just to drop most rows.
+                    candidate_query = f"SELECT * FROM {GameLinesTable._table}"
+                    candidate_conditions = []
+                    candidate_params: list = []
                     if game_filter:
-                        all_lines = [line for line in all_lines if line.game_name == game_filter]
+                        candidate_conditions.append("game_name = ?")
+                        candidate_params.append(game_filter)
+                    if date_start_timestamp is not None:
+                        candidate_conditions.append("CAST(timestamp AS REAL) >= ?")
+                        candidate_params.append(date_start_timestamp)
+                    if date_end_timestamp is not None:
+                        candidate_conditions.append("CAST(timestamp AS REAL) <= ?")
+                        candidate_params.append(date_end_timestamp)
+                    if candidate_conditions:
+                        candidate_query += " WHERE " + " AND ".join(candidate_conditions)
 
-                    # Apply date range filter if provided
-                    if date_start_timestamp is not None or date_end_timestamp is not None:
-                        filtered_lines = []
-                        for line in all_lines:
-                            if not line.timestamp:
-                                continue
-                            timestamp = float(line.timestamp)
-                            # Check if timestamp is within range
-                            if date_start_timestamp is not None and timestamp < date_start_timestamp:
-                                continue
-                            if date_end_timestamp is not None and timestamp > date_end_timestamp:
-                                continue
-                            filtered_lines.append(line)
-                        all_lines = filtered_lines
+                    candidate_rows = GameLinesTable._db.fetchall(candidate_query, tuple(candidate_params))
+                    all_lines = [GameLinesTable.from_row(row) for row in candidate_rows]
 
                     # Guard against runaway patterns before compiling. This is an intentional
                     # regex-search feature on the localhost single-user DB (the "user" is the

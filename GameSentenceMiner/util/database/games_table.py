@@ -364,6 +364,24 @@ class GamesTable(SQLiteDBTable):
         return float(result[0]) if result and result[0] else None
 
     @classmethod
+    def get_start_dates(cls) -> Dict[str, float]:
+        """Get the start date (first-line timestamp) for every game in one query.
+
+        Returns game_id -> earliest line timestamp; games with no lines are absent.
+        """
+        from GameSentenceMiner.util.database.db import GameLinesTable
+
+        rows = GameLinesTable._db.fetchall(
+            f"SELECT game_id, MIN(timestamp) FROM {GameLinesTable._table} "
+            f"WHERE game_id IS NOT NULL AND game_id != '' GROUP BY game_id"
+        )
+        start_dates: Dict[str, float] = {}
+        for game_id, min_timestamp in rows:
+            if game_id and min_timestamp is not None:
+                start_dates[game_id] = float(min_timestamp)
+        return start_dates
+
+    @classmethod
     def get_last_played_date(cls, game_id: str) -> Optional[float]:
         """
         Get the last played date (timestamp of most recent line) for a game.

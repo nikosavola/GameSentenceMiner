@@ -58,21 +58,39 @@ def build_game_display_name_mapping(all_lines) -> Dict[str, str]:
     for display in charts and statistics.
     """
     game_name_to_display: Dict[str, str] = {}
-    unique_game_names = set(line.game_name or "Unknown Game" for line in all_lines)
 
-    logger.debug(f"Building display name mapping for {len(unique_game_names)} unique games")
+    # Pick the first line per game_name (in iteration order) so the resolved
+    # game_id matches the previous next(...) behavior exactly.
+    sample_line_by_name: Dict[str, object] = {}
+    for line in all_lines:
+        game_name = line.game_name or "Unknown Game"
+        if game_name not in sample_line_by_name:
+            sample_line_by_name[game_name] = line
 
-    for game_name in unique_game_names:
-        sample_line = next(
-            (line for line in all_lines if (line.game_name or "Unknown Game") == game_name),
-            None,
-        )
-        if sample_line:
-            game_metadata = _get_games_table().get_by_game_line(sample_line)
-            if game_metadata and game_metadata.title_original:
-                game_name_to_display[game_name] = game_metadata.title_original
-            else:
-                game_name_to_display[game_name] = game_name
+    logger.debug(f"Building display name mapping for {len(sample_line_by_name)} unique games")
+
+    GamesTable = _get_games_table()
+    # Single full-table read (images excluded) replaces the per-game get_by_game_line().
+    games = GamesTable.all_without_images()
+    games_by_id = {game.id: game for game in games}
+    game_by_title: Dict[str, object] = {}
+    for game in games:
+        if game.title_original:
+            game_by_title.setdefault(game.title_original, game)
+
+    for game_name, sample_line in sample_line_by_name.items():
+        # Mirror GamesTable.get_by_game_line: prefer game_id, fall back to name.
+        game_metadata = None
+        game_id = (getattr(sample_line, "game_id", "") or "").strip()
+        if game_id:
+            game_metadata = games_by_id.get(game_id)
+        if game_metadata is None and getattr(sample_line, "game_name", None):
+            game_metadata = game_by_title.get(sample_line.game_name)
+
+        if game_metadata and game_metadata.title_original:
+            game_name_to_display[game_name] = game_metadata.title_original
+        else:
+            game_name_to_display[game_name] = game_name
 
     return game_name_to_display
 
@@ -579,10 +597,13 @@ def calculate_game_milestones(all_lines=None) -> dict | None:
         all_lines: Unused parameter (kept for API compatibility).
     """
     GamesTable = _get_games_table()
-    all_games = GamesTable.all()
+    all_games = GamesTable.all_without_images()
 
     if not all_games:
         return None
+
+    # One grouped query for all first-played dates instead of a query per game.
+    start_dates = GamesTable.get_start_dates()
 
     def parse_release_date(game_dict: dict) -> str:
         try:
@@ -604,7 +625,7 @@ def calculate_game_milestones(all_lines=None) -> dict | None:
     games_with_dates: list[dict] = []
     for game in all_games:
         if game.release_date and game.release_date.strip():
-            first_played = GamesTable.get_start_date(game.id)
+            first_played = start_dates.get(game.id)
             games_with_dates.append(
                 {
                     "id": game.id,
@@ -634,12 +655,19 @@ def calculate_game_milestones(all_lines=None) -> dict | None:
     result: dict = {}
 
     def _build_milestone_entry(game: dict) -> dict:
+        # all_without_images() only carries a presence flag for image; fetch the
+        # real base64 blob for the (single) game actually shown in the milestone.
+        image = ""
+        if game["image"]:
+            full_game = GamesTable.get(game["id"])
+            if full_game:
+                image = full_game.image or ""
         return {
             "title_original": game["title_original"],
             "title_romaji": game["title_romaji"],
             "title_english": game["title_english"],
             "type": game["type"],
-            "image": game["image"],
+            "image": image,
             "release_date": format_release_date(game["release_date"]),
             "release_date_full": game["release_date"],
             "first_played": format_first_played(game["first_played"]),
